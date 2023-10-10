@@ -1,29 +1,11 @@
 #!/bin/bash
 
-function prepare() {
-    # Install dependencies
-    cd $1
-    ./build.sh
-    cd ..
-}
-
-echo "Creating network..."
-
-docker network create rocket-network
-
 echo "Compiling services..."
 
-prepare "mission-commander-department"
+prepare "scripts"
 
-prepare "telemetrie-department"
 
-prepare "weather-department"
-
-prepare "rocket-department"
-
-prepare "rocket" 
-
-prepare "payload-department"
+docker compose -p soa-marsy up -d
 
 echo "--- Done Building ---"
 

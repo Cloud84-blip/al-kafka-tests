@@ -8,10 +8,25 @@ const payloadServiceUrl = process.env.PAYLOAD_SERVICE_URL;
 const rocketServiceUrl = process.env.ROCKET_SERVICE_URL;
 const telemetrieServiceUrl = process.env.TELEMETRIE_SERVICE_URL;
 const missionCommanderUrl = process.env.MISSION_COMMANDER_SERVICE_URL;
+
 const status = {
     rocketReady: false,
     weatherReady: false,
 }
+
+
+// function to Catch Ctrl+C
+process.on('SIGINT', async() => {
+    try {
+        console.log(chalk.red('Simulation stopped by user'));
+        await post("http://localhost:3001" + "/stop-simulation", {});
+        process.exit();
+    } catch (error) {
+        console.error(error);
+    }
+    process.exit();
+});
+
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -64,7 +79,7 @@ const get = async(url) => {
 
 async function main() {
     console.log(chalk.green('\n----------------------------------'));
-    console.log(chalk.green('SCENARIO 2: CRITICAL FAILURE DURING FLIGHT'));
+    console.log(chalk.green('SCENARIO 1: ORBITAL INSERTION'));
     console.log(chalk.green('----------------------------------\n'));
 
     await sleep(1000);
@@ -112,6 +127,9 @@ async function main() {
                 .then((r) => {
                     console.log(r);
                     console.log(chalk.gray('Payload poste au r dept : '));
+                })
+                .catch(err => {
+                    console.log(err)
                 });
             console.log(chalk.gray('Payload chargé dans la fusée : '));
             // Après avoir chargé le payload, considérez la fusée comme prête
@@ -143,7 +161,6 @@ async function main() {
             console.log(chalk.red('Liftoff !'));
             await sleep(2000);
             console.log(JSON.stringify(rocketStatus));
-            rocketStatus.status = 'Fail';
             const rocketLaunched = await post(rocketDeptServiceUrl + '/rocket', rocketStatus)
                 .then((response) => {
                     console.log(chalk.red('LIFTOFF : ', response));
@@ -160,23 +177,18 @@ async function main() {
 
             const telemetrieInterval = setInterval(async() => {
                 const telemetrics = await get(telemetrieServiceUrl + "/rocket/telemetrics")
-                    .then(async(response) => {
+                    .then((response) => {
                         console.log(chalk.yellow("Rocket telemetrics : \r"));
                         console.log(response);
-                        if (response.status === 'First Stage Seperation Failed') {
-                            console.log(chalk.red('First Stage Seperation Failed'));
 
-                            console.log('Richard : ordre de destruction de la fusée');
-                            await post(missionCommanderUrl + "/rocket/destroy", {});
-                            console.log(chalk.red('Rocket is going to explode'));
-                            console.log(chalk.red('Payload is destroyed'));
-                            console.log(chalk.red('Rocket is destroyed'));
-                            console.log(chalk.red('Mission is failed'));
-                            clearInterval(telemetrieInterval);
+                        if (response.status === 'First Stage Separated') {
+                            console.log(chalk.green('---First Stage Separated Successfully---'));
                         }
+
+
                         return response;
                     })
-
+                sleep(500);
                 const payloadTelemetrics = await get(payloadServiceUrl + "/rocket/payload/data")
                     .then((response) => {
                         console.log(chalk.yellow("Payload telemetrics : \r"));
@@ -184,13 +196,22 @@ async function main() {
                         return response;
                     })
 
-            }, 1500); // 2 secondes d'intervalle
+            }, 2000); // 2 secondes d'intervalle
             setTimeout(async() => {
                 clearInterval(telemetrieInterval);
+                // Asking payload department if payload is deployed
+                await sleep(2000);
+                console.log('Gwynne : demande au payload dept si le payload est déployé correctement');
+                console.log('-- GET payload-service:3004/rocket/payload/data --');
+                const deployed = await get(payloadServiceUrl + "/rocket/payload/data");
+                await sleep(1000);
+                console.log(chalk.gray('Payload status : ', chalk.green(deployed.status)));
+                await sleep(2000);
 
+                console.log('Richard : mission terminée');
                 console.log('Stop simulation');
-                await post("http://localhost:3001" + "/stop-simulation", {});
-            }, 60000); // 120 secondes -- durée de la simulation de la mise en orbite
+                await post(rocketDeptServiceUrl + "/stop-simulation", {});
+            }, 120000); // 120 secondes -- durée de la simulation de la mise en orbite
         }
 
     } catch (error) {
