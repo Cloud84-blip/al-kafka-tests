@@ -1,0 +1,17 @@
+# Construction
+FROM node:18-alpine as builder
+WORKDIR /app
+COPY package.json tsconfig.json .env ./
+COPY --chown=node:node . .
+RUN yarn install --production && yarn build
+USER node
+
+# Production
+FROM node:18-alpine as production
+ENV NODE_ENV production
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.env ./.env
+CMD ["node", "dist/src/main.js"]
+EXPOSE 3001

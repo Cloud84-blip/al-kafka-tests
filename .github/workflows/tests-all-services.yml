@@ -1,0 +1,16 @@
+name: Are departments Alive
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build services and run
+        run: ./prepare.sh
+      - name: Check is departments are alive after build
+        run: npx playwright test

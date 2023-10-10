@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "hbs": "^4.2.0",
+    "yarn": "^1.22.19"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.38.1",
+    "@types/node": "^20.7.0"
+  }
+}
